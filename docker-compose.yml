@@ -1,0 +1,68 @@
+services:
+
+  postgresdb:
+    image: postgres:15-alpine
+    container_name: saas_postgres_db
+    restart: always
+
+    environment:
+      POSTGRES_USER: saas_user
+      POSTGRES_PASSWORD: saas_password
+      POSTGRES_DB: saas_management
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    networks:
+      - saas-network
+
+  backend-app:
+    build:
+      context: ./saas
+      dockerfile: Dockerfile
+
+    container_name: saas_backend_api
+    restart: always
+
+    ports:
+      - "8080:8080"
+
+    depends_on:
+      - postgresdb
+
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgresdb:5432/saas_management
+      SPRING_DATASOURCE_USERNAME: saas_user
+      SPRING_DATASOURCE_PASSWORD: saas_password
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_SQL_INIT_MODE: always
+
+    networks:
+      - saas-network
+
+  frontend-app:
+    build:
+      context: ./saas_client
+      dockerfile: Dockerfile
+
+    container_name: saas_frontend
+    restart: always
+
+    ports:
+      - "4200:80"
+
+    depends_on:
+      - backend-app
+
+    networks:
+      - saas-network
+
+volumes:
+  postgres_data:
+
+networks:
+  saas-network:
+    driver: bridge
